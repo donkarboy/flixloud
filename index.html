@@ -276,6 +276,19 @@
     </label>
   </div>
 
+  <!-- Proxy config -->
+  <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
+    <label for="proxy-pattern">Proxy pattern</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <button class="tab active" onclick="setPattern(0,this)">proxy/<i>url</i></button>
+      <button class="tab" onclick="setPattern(1,this)">proxy?url=<i>url</i></button>
+      <button class="tab" onclick="setPattern(2,this)">proxy?target=<i>encoded</i></button>
+      <button class="tab" onclick="setPattern(3,this)">Direct (no proxy)</button>
+    </div>
+    <label for="proxy-base">Proxy base URL</label>
+    <input id="proxy-base" type="text" value="https://vixsrcproxy2.khantara922.workers.dev/" style="font-size:0.78rem"/>
+  </div>
+
   <div id="status"></div>
 </div>
 
@@ -295,27 +308,44 @@
 </div>
 
 <script>
-  const PROXY   = 'https://vixsrcproxy2.khantara922.workers.dev/';
   const API_BASE = 'https://api.lunaranime.ru/api/3rdprovider';
 
   let currentData = null;
+  let proxyPattern = 0; // 0=path, 1=?url=, 2=?target=encoded, 3=direct
+
+  function setPattern(n, btn) {
+    proxyPattern = n;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+  }
 
   function setStatus(msg, type = 'info') {
     const el = document.getElementById('status');
-    el.textContent = msg;
+    el.innerHTML = msg;
     el.className = type;
   }
 
-  function buildUrl(anilist, episode) {
-    const autoplay   = document.getElementById('autoplay').checked;
-    const skipIntro  = document.getElementById('skip-intro').checked;
-    const skipOutro  = document.getElementById('skip-outro').checked;
+  function buildTargetUrl(anilist, episode) {
+    const autoplay  = document.getElementById('autoplay').checked;
+    const skipIntro = document.getElementById('skip-intro').checked;
+    const skipOutro = document.getElementById('skip-outro').checked;
 
     const params = new URLSearchParams({ anilist, episode, autoplay });
     if (skipIntro) params.set('skip_intro', 'true');
     if (skipOutro) params.set('skip_outro', 'true');
 
-    return `${PROXY}${API_BASE}?${params.toString()}`;
+    return `${API_BASE}?${params.toString()}`;
+  }
+
+  function buildProxyUrl(targetUrl) {
+    const base = document.getElementById('proxy-base').value.trim().replace(/\/$/, '');
+    switch (proxyPattern) {
+      case 0: return `${base}/${targetUrl}`;                                   // proxy/https://...
+      case 1: return `${base}/?url=${encodeURIComponent(targetUrl)}`;          // proxy?url=encoded
+      case 2: return `${base}/?target=${encodeURIComponent(targetUrl)}`;       // proxy?target=encoded
+      case 3: return targetUrl;                                                 // direct (no proxy)
+      default: return `${base}/${targetUrl}`;
+    }
   }
 
   async function fetchPlayer() {
@@ -330,16 +360,24 @@
     const btn = document.getElementById('fetch-btn');
     btn.disabled = true;
     btn.textContent = '⏳ Loading…';
-    setStatus(`Fetching episode ${episode} for AniList ID ${anilist}…`, 'info');
 
     document.getElementById('player-wrap').style.display   = 'none';
     document.getElementById('results-card').style.display  = 'none';
 
-    try {
-      const url = buildUrl(anilist, episode);
-      const res = await fetch(url);
+    const targetUrl = buildTargetUrl(anilist, episode);
+    const proxyUrl  = buildProxyUrl(targetUrl);
 
-      if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+    setStatus(`Fetching via proxy…<br><small style="opacity:.6;word-break:break-all">${escHtml(proxyUrl)}</small>`, 'info');
+
+    try {
+      const res = await fetch(proxyUrl);
+
+      if (!res.ok) {
+        // Try to read body for more detail
+        let body = '';
+        try { body = await res.text(); } catch(_) {}
+        throw new Error(`HTTP ${res.status} — ${res.statusText}${body ? ': ' + body.slice(0, 200) : ''}`);
+      }
 
       const json = await res.json();
 
@@ -354,7 +392,7 @@
       setStatus(`✓ Found ${json.data.length} server${json.data.length > 1 ? 's' : ''} · Status: ${json.status}`, 'ok');
 
     } catch (err) {
-      setStatus(`Error: ${err.message}`, 'err');
+      setStatus(`❌ ${escHtml(err.message)}<br><small style="opacity:.6">Proxy URL: ${escHtml(proxyUrl)}</small>`, 'err');
       console.error(err);
     } finally {
       btn.disabled = false;
