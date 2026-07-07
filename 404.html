@@ -1,82 +1,772 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"></head>
-<body>
-<script>
-const PROXY = "https://odd-heart-2567.andruilsyestems.workers.dev";
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lunar Player</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 
-async function main() {
-  // Parse URL: /flixloud/1735/1
-  const parts = window.location.pathname.replace(/^\/[^/]+\//, "").split("/").filter(Boolean);
-  const anilist_id = parts[0];
-  const episode    = parts[1];
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  // If no ID/episode in URL, show usage
-  if (!anilist_id || !episode) {
-    return json({ error: "Usage: /flixloud/{anilist_id}/{episode}" });
+  :root {
+    --bg:        #08090c;
+    --surface:   #0f1117;
+    --card:      #161923;
+    --border:    #1e2535;
+    --accent:    #6c8eff;
+    --accent2:   #a78bfa;
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --success:   #34d399;
+    --danger:    #f87171;
+    --radius:    10px;
+    --glow:      0 0 20px rgba(108,142,255,.25);
   }
 
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Top bar ── */
+  header {
+    width: 100%;
+    max-width: 1080px;
+    padding: 18px 20px 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: .04em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo span { opacity: .5; -webkit-text-fill-color: var(--muted); }
+  header .badge {
+    font-size: .72rem;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: var(--muted);
+    letter-spacing: .05em;
+  }
+
+  /* ── Main wrap ── */
+  .wrap {
+    width: 100%;
+    max-width: 1080px;
+    padding: 18px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ── Episode info strip ── */
+  .ep-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ep-info .title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+    min-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ep-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .75rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 10px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  /* ── Player box ── */
+  .player-shell {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  .player-shell iframe {
+    width: 100%; height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* Overlay states */
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px;
+    background: #000;
+    z-index: 10;
+  }
+  .overlay.hidden { display: none; }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay p { color: var(--muted); font-size: .85rem; }
+
+  /* Error state */
+  .overlay.error .spinner { display: none; }
+  .overlay.error .err-icon { font-size: 2.5rem; }
+  .overlay.error p { color: var(--danger); font-size: .9rem; text-align: center; max-width: 300px; }
+
+  /* Welcome state */
+  .welcome-logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: .04em;
+  }
+  .welcome-hint { color: var(--muted); font-size: .85rem; text-align: center; line-height: 1.6; }
+  .welcome-hint code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--accent);
+    font-size: .8rem;
+  }
+
+  /* ── Controls bar ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Nav group */
+  .nav-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 8px;
+  }
+  .ep-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .8rem;
+    color: var(--text);
+    padding: 0 6px;
+    min-width: 70px;
+    text-align: center;
+  }
+
+  /* Icon button */
+  .icon-btn {
+    background: none; border: none;
+    color: var(--muted); cursor: pointer;
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .15s, background .15s;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--border); }
+  .icon-btn:disabled { opacity: .3; cursor: not-allowed; }
+  .icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
+
+  /* Toggle button */
+  .toggle-group {
+    display: flex;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .toggle-btn {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    border: none; background: none;
+    color: var(--muted);
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+  }
+  .toggle-btn.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: var(--glow);
+  }
+  .toggle-btn:not(.active):hover { color: var(--text); }
+
+  /* Auto buttons */
+  .auto-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .auto-btn {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: .75rem;
+    font-weight: 500;
+    letter-spacing: .04em;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--muted);
+    border-radius: 7px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .auto-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(108,142,255,.08);
+  }
+  .auto-btn:hover:not(.active) { color: var(--text); border-color: #2e3a55; }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .auto-btn.active .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* ── Source selector ── */
+  .sources-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .sources-label {
+    font-size: .72rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .source-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .src-chip {
+    font-size: .73rem;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 10px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .src-chip.active {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(167,139,250,.08);
+  }
+  .src-chip:hover:not(.active) { color: var(--text); border-color: #2e3a55; }
+  .no-sources { font-size: .8rem; color: var(--muted); }
+
+  /* ── Auto-next countdown toast ── */
+  .toast {
+    position: fixed;
+    bottom: 28px; right: 28px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.6);
+    z-index: 999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: transform .3s ease, opacity .3s ease;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-text { font-size: .85rem; color: var(--text); }
+  .toast-text strong { color: var(--accent); }
+  .toast-cancel {
+    font-size: .75rem;
+    background: none; border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 10px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .toast-cancel:hover { color: var(--danger); border-color: var(--danger); }
+  .toast-bar {
+    position: absolute; bottom: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    border-radius: 0 0 0 var(--radius);
+    width: 100%;
+    transform-origin: left;
+    transform: scaleX(1);
+    transition: transform linear;
+  }
+
+  /* ── URL input area ── */
+  .url-row {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .url-input {
+    flex: 1; min-width: 220px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .78rem;
+    padding: 8px 12px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .url-input:focus { border-color: var(--accent); }
+  .url-input::placeholder { color: var(--muted); }
+  .go-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 7px;
+    color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: .8rem;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: opacity .15s, box-shadow .15s;
+    white-space: nowrap;
+  }
+  .go-btn:hover { opacity: .88; box-shadow: var(--glow); }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px; background: var(--border); width: 100%;
+  }
+
+  @media (max-width: 540px) {
+    .auto-group { margin-left: 0; width: 100%; }
+    .auto-btn { flex: 1; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Lunar<span>Player</span></div>
+  <div class="badge">BETA</div>
+</header>
+
+<div class="wrap">
+
+  <!-- URL input row -->
+  <div class="url-row">
+    <input class="url-input" id="urlInput" type="text"
+      placeholder="AniList ID / MAL ID  e.g. 20  then press Go">
+    <input class="url-input" id="epInput" type="number" min="1"
+      placeholder="Episode" style="max-width:110px">
+    <button class="go-btn" id="goBtn">▶ Go</button>
+  </div>
+
+  <!-- Episode info -->
+  <div class="ep-info" id="epInfo" style="display:none">
+    <div class="title" id="epTitle">—</div>
+    <div class="ep-chip" id="epChip">EP —</div>
+  </div>
+
+  <!-- Player -->
+  <div class="player-shell" id="playerShell">
+    <div class="overlay" id="overlay">
+      <div class="welcome-logo">Lunar</div>
+      <div class="welcome-hint">
+        Enter an AniList/MAL ID and episode above,<br>
+        or navigate directly to<br>
+        <code>https://donkarboy.github.io/flixloud/20/1</code>
+      </div>
+    </div>
+    <iframe id="playerFrame" src="about:blank" allowfullscreen
+      allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+      style="display:none"></iframe>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <!-- Nav -->
+    <div class="nav-group">
+      <button class="icon-btn" id="prevBtn" title="Previous episode">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+      </button>
+      <div class="ep-display" id="epDisplay">EP —</div>
+      <button class="icon-btn" id="nextBtn" title="Next episode">
+        <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm10-12v12h2V6h-2z"/></svg>
+      </button>
+    </div>
+
+    <!-- Sub / Dub -->
+    <div class="toggle-group" id="audioBtns" style="display:none">
+      <button class="toggle-btn active" id="subBtn" data-audio="sub">SUB</button>
+      <button class="toggle-btn"        id="dubBtn" data-audio="dub">DUB</button>
+    </div>
+
+    <!-- Auto controls -->
+    <div class="auto-group">
+      <button class="auto-btn" id="autoPlayBtn">
+        <span class="dot"></span>Auto Play
+      </button>
+      <button class="auto-btn" id="autoNextBtn">
+        <span class="dot"></span>Auto Next
+      </button>
+    </div>
+  </div>
+
+  <!-- Source selector -->
+  <div class="sources-bar" id="sourcesBar" style="display:none">
+    <span class="sources-label">Source</span>
+    <div class="source-chips" id="sourceChips"></div>
+  </div>
+
+</div>
+
+<!-- Auto-next toast -->
+<div class="toast" id="toast">
+  <div style="position:relative;flex:1">
+    <div class="toast-text">Next episode in <strong id="countdownNum">5</strong>s</div>
+    <div class="toast-bar" id="toastBar"></div>
+  </div>
+  <button class="toast-cancel" id="toastCancel">Cancel</button>
+</div>
+
+<script>
+const PROXY = "https://odd-heart-2567.andruilsyestems.workers.dev";
+const DELAY = 5; // seconds before auto-next
+
+/* ── State ── */
+let state = {
+  anilistId: null,
+  episode:   null,
+  audio:     "sub",
+  sources:   [],
+  srcIndex:  0,
+  allSubs:   [],
+  allDubs:   [],
+  autoPlay:  false,
+  autoNext:  false,
+  loading:   false,
+};
+let countdownTimer = null;
+
+/* ── DOM refs ── */
+const overlay     = document.getElementById("overlay");
+const frame       = document.getElementById("playerFrame");
+const epInfo      = document.getElementById("epInfo");
+const epTitle     = document.getElementById("epTitle");
+const epChip      = document.getElementById("epChip");
+const epDisplay   = document.getElementById("epDisplay");
+const prevBtn     = document.getElementById("prevBtn");
+const nextBtn     = document.getElementById("nextBtn");
+const subBtn      = document.getElementById("subBtn");
+const dubBtn      = document.getElementById("dubBtn");
+const audioBtns   = document.getElementById("audioBtns");
+const autoPlayBtn = document.getElementById("autoPlayBtn");
+const autoNextBtn = document.getElementById("autoNextBtn");
+const sourcesBar  = document.getElementById("sourcesBar");
+const sourceChips = document.getElementById("sourceChips");
+const urlInput    = document.getElementById("urlInput");
+const epInput     = document.getElementById("epInput");
+const goBtn       = document.getElementById("goBtn");
+const toast       = document.getElementById("toast");
+const countdownNum= document.getElementById("countdownNum");
+const toastBar    = document.getElementById("toastBar");
+const toastCancel = document.getElementById("toastCancel");
+
+/* ── Parse URL path for /flixloud/{id}/{ep} ──
+   Works whether this page is served as 404.html (GitHub Pages catch-all)
+   or loaded directly. Strips the repo prefix automatically. */
+function parseUrl() {
+  // pathname examples:
+  //   /flixloud/20/5          → direct visit on github pages root
+  //   /reponame/flixloud/20/5 → project-page github pages
+  const path = window.location.pathname;
+
+  // Match /{anything}/flixloud/{id}/{ep} OR /flixloud/{id}/{ep}
+  const m = path.match(/\/flixloud\/([^/]+)\/(\d+)/);
+  if (m) return { id: m[1], ep: parseInt(m[2]) || 1 };
+
+  // Fallback: last two path segments that look like id/number
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length >= 2) {
+    const ep  = parseInt(parts[parts.length - 1]);
+    const id  = parts[parts.length - 2];
+    if (!isNaN(ep) && id && !/^(flixloud|index)$/.test(id)) {
+      return { id, ep };
+    }
+  }
+  return null;
+}
+
+/* ── Fetch sources from proxy ── */
+async function fetchSources(anilistId, episode) {
+  showLoading(`Loading episode ${episode}…`);
   try {
-    const params = new URLSearchParams({ anilist: anilist_id, episode, autoplay: "true" });
-    const res  = await fetch(`${PROXY}/?${params}`);
-    const text = await res.text();
+    const params = new URLSearchParams({ anilist: anilistId, episode, autoplay: "true" });
+    const res    = await fetch(`${PROXY}/?${params}`);
+    const text   = await res.text();
+    if (!text.trim().startsWith("{")) throw new Error("Unexpected proxy response");
+    const data   = JSON.parse(text);
+    if (!data.success) throw new Error(data.error || "Proxy returned failure");
 
-    if (!text.trim().startsWith("{")) throw new Error("Non-JSON from proxy");
-
-    const data = JSON.parse(text);
-    if (!data.success) return json(data);
-
-    // Expand flixcloud → sub + dub
-    const expanded = [];
+    const subs = [], dubs = [];
     for (const s of data.data || []) {
       const pu = s.player_url || "";
       if (pu.includes("flixcloud.cc")) {
         const sep = pu.includes("?") ? "&" : "?";
-        expanded.push({ ...s, audio: "sub", player_url: `${pu}${sep}a=1` });
-        expanded.push({ ...s, audio: "dub", player_url: `${pu}${sep}a=2` });
+        subs.push({ ...s, audio: "sub", label: s.server || "flixcloud", url: `${pu}${sep}a=1` });
+        dubs.push({ ...s, audio: "dub", label: s.server || "flixcloud", url: `${pu}${sep}a=2` });
       } else {
-        expanded.push(s);
+        const item = { ...s, label: s.server || "source", url: pu };
+        subs.push({ ...item, audio: "sub" });
       }
     }
-
-    json({ success: true, anilist_id, episode, total: expanded.length, data: expanded });
-
-  } catch (e) {
-    json({ success: false, error: e.message });
+    return { subs, dubs };
+  } catch(e) {
+    showError(e.message);
+    return null;
   }
 }
 
-function json(data) {
-  // Render clean JSON in browser
-  document.open();
-  document.write(`<!DOCTYPE html><html><head>
-    <meta charset="UTF-8">
-    <title>Lunar API</title>
-    <style>
-      body { background: #0d0d0d; color: #c9d1d9; font-family: monospace; font-size: 13px; padding: 20px; }
-      pre { white-space: pre-wrap; word-break: break-all; }
-      .key { color: #79c0ff; }
-      .str { color: #a5d6ff; }
-      .num { color: #f0883e; }
-      .bool { color: #ff7b72; }
-      .null { color: #8b949e; }
-    </style>
-  </head><body><pre>${syntaxHighlight(data)}</pre></body></html>`);
-  document.close();
+/* ── Load episode ── */
+async function loadEpisode(id, ep) {
+  cancelAutoNext();
+  state.anilistId = id;
+  state.episode   = ep;
+  state.srcIndex  = 0;
+
+  urlInput.value  = id;
+  epInput.value   = ep;
+  epDisplay.textContent = `EP ${ep}`;
+  epChip.textContent    = `EP ${ep}`;
+  epTitle.textContent   = `AniList / MAL ${id}`;
+  epInfo.style.display  = "flex";
+  prevBtn.disabled      = ep <= 1;
+
+  const res = await fetchSources(id, ep);
+  if (!res) return;
+
+  state.allSubs = res.subs;
+  state.allDubs = res.dubs;
+
+  audioBtns.style.display = res.dubs.length ? "flex" : "none";
+  applySources();
 }
 
-function syntaxHighlight(obj) {
-  return JSON.stringify(obj, null, 2)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
-      if (/^"/.test(match)) return match.endsWith(":") ? `<span class="key">${match}</span>` : `<span class="str">${match}</span>`;
-      if (/true|false/.test(match)) return `<span class="bool">${match}</span>`;
-      if (/null/.test(match)) return `<span class="null">${match}</span>`;
-      return `<span class="num">${match}</span>`;
-    });
+/* ── Apply current audio selection ── */
+function applySources() {
+  state.sources  = state.audio === "sub" ? state.allSubs : state.allDubs;
+  state.srcIndex = 0;
+  renderSourceChips();
+  playSource(0);
 }
 
-main();
+/* ── Render source chips ── */
+function renderSourceChips() {
+  sourceChips.innerHTML = "";
+  if (state.sources.length === 0) {
+    sourcesBar.style.display = "none";
+    return;
+  }
+  sourcesBar.style.display = "flex";
+  state.sources.forEach((s, i) => {
+    const chip = document.createElement("button");
+    chip.className = "src-chip" + (i === state.srcIndex ? " active" : "");
+    chip.textContent = s.label + (s.audio ? ` [${s.audio}]` : "");
+    chip.onclick = () => { state.srcIndex = i; renderSourceChips(); playSource(i); };
+    sourceChips.appendChild(chip);
+  });
+}
+
+/* ── Play source by index ── */
+function playSource(idx) {
+  const src = state.sources[idx];
+  if (!src) { showError("No source available for this selection."); return; }
+  hideOverlay();
+  frame.style.display = "block";
+  frame.src = state.autoPlay ? ensureAutoplay(src.url) : src.url;
+}
+
+function ensureAutoplay(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.set("autoplay", "1");
+    return u.toString();
+  } catch { return url; }
+}
+
+/* ── Overlay helpers ── */
+function showLoading(msg) {
+  frame.style.display = "none";
+  overlay.className   = "overlay";
+  overlay.innerHTML   = `<div class="spinner"></div><p>${msg}</p>`;
+}
+function showError(msg) {
+  frame.style.display = "none";
+  overlay.className   = "overlay error";
+  overlay.innerHTML   = `<div class="err-icon">⚠️</div><p>${msg}</p>`;
+}
+function showWelcome() {
+  frame.style.display = "none";
+  overlay.className   = "overlay";
+  overlay.innerHTML   = `
+    <div class="welcome-logo">Lunar</div>
+    <div class="welcome-hint">
+      Enter an AniList/MAL ID and episode above,<br>or navigate directly to<br>
+      <code>https://donkarboy.github.io/flixloud/20/1</code>
+    </div>`;
+}
+function hideOverlay() {
+  overlay.className = "overlay hidden";
+}
+
+/* ── Auto-next toast ── */
+function startAutoNext() {
+  cancelAutoNext();
+  let remaining = DELAY;
+  countdownNum.textContent = remaining;
+  toast.classList.add("show");
+  toastBar.style.transition = `transform ${DELAY}s linear`;
+  toastBar.style.transform  = "scaleX(0)";
+
+  countdownTimer = setInterval(() => {
+    remaining--;
+    countdownNum.textContent = remaining;
+    if (remaining <= 0) {
+      cancelAutoNext();
+      goNext();
+    }
+  }, 1000);
+}
+function cancelAutoNext() {
+  clearInterval(countdownTimer);
+  countdownTimer = null;
+  toast.classList.remove("show");
+  toastBar.style.transition = "none";
+  toastBar.style.transform  = "scaleX(1)";
+}
+
+/* ── Navigation ── */
+function goNext() {
+  if (state.anilistId) {
+    const nextEp = state.episode + 1;
+    history.pushState({}, "", `/flixloud/${state.anilistId}/${nextEp}`);
+    loadEpisode(state.anilistId, nextEp);
+  }
+}
+function goPrev() {
+  if (state.anilistId && state.episode > 1) {
+    const prevEp = state.episode - 1;
+    history.pushState({}, "", `/flixloud/${state.anilistId}/${prevEp}`);
+    loadEpisode(state.anilistId, prevEp);
+  }
+}
+
+/* ── iframe message listener (video end detection) ── */
+window.addEventListener("message", (e) => {
+  const d = e.data;
+  if (!d) return;
+  const ev = (typeof d === "string") ? d : d.event || d.type || d.action || "";
+  if (/ended|complete|finish/i.test(ev)) {
+    if (state.autoNext && state.anilistId) startAutoNext();
+  }
+});
+
+/* ── Button wiring ── */
+prevBtn.onclick = goPrev;
+nextBtn.onclick = goNext;
+toastCancel.onclick = cancelAutoNext;
+
+subBtn.onclick = () => {
+  if (state.audio === "sub") return;
+  state.audio = "sub";
+  subBtn.classList.add("active");
+  dubBtn.classList.remove("active");
+  applySources();
+};
+dubBtn.onclick = () => {
+  if (state.audio === "dub") return;
+  state.audio = "dub";
+  dubBtn.classList.add("active");
+  subBtn.classList.remove("active");
+  applySources();
+};
+
+autoPlayBtn.onclick = () => {
+  state.autoPlay = !state.autoPlay;
+  autoPlayBtn.classList.toggle("active", state.autoPlay);
+  if (state.sources.length) playSource(state.srcIndex);
+};
+autoNextBtn.onclick = () => {
+  state.autoNext = !state.autoNext;
+  autoNextBtn.classList.toggle("active", state.autoNext);
+};
+
+goBtn.onclick = () => {
+  const id = urlInput.value.trim();
+  const ep = parseInt(epInput.value) || 1;
+  if (!id) return;
+  history.pushState({}, "", `/flixloud/${id}/${ep}`);
+  loadEpisode(id, ep);
+};
+urlInput.addEventListener("keydown", (e) => e.key === "Enter" && goBtn.click());
+epInput.addEventListener("keydown",  (e) => e.key === "Enter" && goBtn.click());
+
+/* ── Init: auto-load from URL if path has /flixloud/{id}/{ep} ── */
+const init = parseUrl();
+if (init) {
+  urlInput.value = init.id;
+  epInput.value  = init.ep;
+  loadEpisode(init.id, init.ep);
+} else {
+  showWelcome();
+}
 </script>
 </body>
 </html>
