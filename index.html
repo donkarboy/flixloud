@@ -1,323 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Anime Player</title>
+  <title>LunarAnime Player</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0b0d14;
-      --surface:   #131624;
-      --border:    #1e2438;
-      --accent:    #6c63ff;
-      --accent2:   #a78bfa;
-      --text:      #e8eaf6;
-      --muted:     #6b7280;
-      --success:   #34d399;
-      --error:     #f87171;
-      --radius:    10px;
+      --bg:      #080a10;
+      --surface: #10131f;
+      --card:    #14182a;
+      --border:  #1f2540;
+      --accent:  #7c6fff;
+      --accent2: #b09eff;
+      --text:    #dde1f5;
+      --muted:   #5a6080;
+      --success: #3ddba0;
+      --error:   #ff6b7a;
+      --sub:     #4ade80;
+      --dub:     #f472b6;
+      --r: 12px;
     }
+
+    html { scroll-behavior: smooth; }
 
     body {
       background: var(--bg);
       color: var(--text);
       font-family: 'Space Grotesk', sans-serif;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 32px 16px 64px;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 36px;
-    }
-    header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      background: linear-gradient(120deg, var(--accent2), var(--accent));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    header p {
-      color: var(--muted);
-      font-size: 0.875rem;
-      margin-top: 6px;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      width: 100%;
-      max-width: 720px;
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-
-    .form-row {
       display: grid;
-      grid-template-columns: 1fr 1fr auto;
-      gap: 12px;
-      align-items: end;
+      grid-template-rows: auto 1fr auto;
     }
 
-    label {
-      display: block;
-      font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 6px;
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,10,16,.85);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
     }
-
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
+    .logo {
+      font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em;
+      background: linear-gradient(110deg, var(--accent2), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .nav-tag {
+      font-size: 0.7rem; background: var(--card); border: 1px solid var(--border);
+      border-radius: 99px; padding: 3px 10px; color: var(--muted);
       font-family: 'Space Mono', monospace;
-      font-size: 0.875rem;
-      padding: 9px 12px;
-      transition: border-color 0.2s;
-      outline: none;
+    }
+
+    /* ── MAIN ── */
+    main {
+      max-width: 800px; width: 100%;
+      margin: 0 auto; padding: 40px 20px 80px;
+    }
+
+    /* ── HERO ── */
+    .hero { margin-bottom: 36px; }
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700; letter-spacing: -0.03em; line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .hero h1 span {
+      background: linear-gradient(110deg, var(--accent2), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero p { color: var(--muted); font-size: 0.9rem; }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 24px; margin-bottom: 20px;
+    }
+
+    /* ── FORM ── */
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;
+    }
+    .field label {
+      display: block; font-size: 0.7rem; font-weight: 600; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
+    }
+    input[type=number], input[type=text] {
+      width: 100%; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace;
+      font-size: .88rem; padding: 10px 13px; outline: none; transition: border-color .2s;
     }
     input:focus { border-color: var(--accent); }
 
-    .btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-family: 'Space Grotesk', sans-serif;
-      font-size: 0.875rem;
-      font-weight: 600;
-      padding: 10px 20px;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
-      white-space: nowrap;
+    .toggles {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
     }
-    .btn:hover { background: #5a52e0; }
-    .btn:active { transform: scale(0.97); }
-    .btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+    .tog {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .78rem; color: var(--muted); cursor: pointer; user-select: none;
+    }
+    .tog input { accent-color: var(--accent); }
 
-    .options-row {
-      display: flex;
-      gap: 16px;
-      margin-top: 14px;
-      flex-wrap: wrap;
+    .btn-load {
+      width: 100%; background: var(--accent); color: #fff; border: none;
+      border-radius: 8px; font-family: 'Space Grotesk', sans-serif;
+      font-size: .95rem; font-weight: 700; padding: 13px;
+      cursor: pointer; transition: background .2s, transform .1s; letter-spacing: .01em;
     }
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      color: var(--muted);
-      cursor: pointer;
-      user-select: none;
-    }
-    .checkbox-label input { accent-color: var(--accent); }
+    .btn-load:hover { background: #6a5ef0; }
+    .btn-load:active { transform: scale(.98); }
+    .btn-load:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
 
-    /* Status */
+    /* ── STATUS ── */
     #status {
-      font-size: 0.8rem;
-      padding: 8px 12px;
-      border-radius: 6px;
-      margin-top: 14px;
-      display: none;
+      font-size: .8rem; padding: 9px 13px; border-radius: 8px;
+      margin-top: 14px; display: none; line-height: 1.6;
     }
-    #status.info  { background: #1e2438; color: var(--accent2); display: block; }
-    #status.ok    { background: #064e3b; color: var(--success);  display: block; }
-    #status.err   { background: #450a0a; color: var(--error);    display: block; }
+    #status.info { background: #131a30; color: var(--accent2); display: block; }
+    #status.ok   { background: #0b2e1e; color: var(--success);  display: block; }
+    #status.err  { background: #2e0b10; color: var(--error);    display: block; }
 
-    /* Player */
+    /* ── PLAYER ── */
     #player-wrap {
-      width: 100%;
-      max-width: 720px;
-      aspect-ratio: 16/9;
-      background: #000;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      overflow: hidden;
-      display: none;
-      margin-bottom: 20px;
+      width: 100%; aspect-ratio: 16/9;
+      background: #000; border-radius: var(--r);
+      border: 1px solid var(--border); overflow: hidden; display: none; margin-bottom: 20px;
     }
-    #player-wrap iframe {
-      width: 100%; height: 100%;
-      border: none;
-    }
+    #player-wrap iframe { width: 100%; height: 100%; border: none; }
 
-    /* Results */
+    /* ── RESULTS ── */
     #results-card { display: none; }
 
+    .section-label {
+      font-size: .68rem; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--muted); margin-bottom: 10px; font-weight: 600;
+    }
+
+    /* server buttons */
+    .servers { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+    .srv-btn {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 14px; cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif; font-size: .8rem;
+      font-weight: 600; color: var(--muted); transition: all .15s;
+    }
+    .srv-btn:hover { border-color: var(--accent); color: var(--text); }
+    .srv-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .srv-btn .dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-sub { background: var(--sub); }
+    .dot-dub { background: var(--dub); }
+    .dot-dual { background: var(--accent2); }
+
+    /* meta grid */
     .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
+      gap: 10px; margin-bottom: 16px;
     }
     .meta-item {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px;
     }
-    .meta-item .key {
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 3px;
+    .meta-item .mk {
+      font-size: .65rem; text-transform: uppercase; letter-spacing: .09em;
+      color: var(--muted); margin-bottom: 3px;
     }
-    .meta-item .val {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.8rem;
-      color: var(--text);
-      word-break: break-all;
+    .meta-item .mv {
+      font-family: 'Space Mono', monospace; font-size: .78rem;
+      color: var(--text); word-break: break-all;
     }
-    .val.badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 0.72rem;
-      font-weight: 700;
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 99px;
+      font-size: .7rem; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
     }
-    .val.badge.dual  { background: #312e81; color: var(--accent2); }
-    .val.badge.sub   { background: #1a3a1a; color: var(--success); }
-    .val.badge.dub   { background: #3a1a1a; color: var(--error);   }
+    .badge-sub  { background: #0d2e18; color: var(--sub); }
+    .badge-dub  { background: #2e0d1e; color: var(--dub); }
+    .badge-dual { background: #1a1650; color: var(--accent2); }
 
-    /* Server tabs */
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-    .tab {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 600;
-      padding: 6px 14px;
-      cursor: pointer;
-      transition: all 0.15s;
+    /* url copy row */
+    .url-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; margin-bottom: 10px;
     }
-    .tab:hover { border-color: var(--accent); color: var(--text); }
-    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .url-row span {
+      font-family: 'Space Mono', monospace; font-size: .73rem;
+      color: var(--accent2); flex: 1; word-break: break-all;
+    }
+    .copy-btn {
+      background: var(--border); border: none; border-radius: 6px;
+      color: var(--muted); font-size: .7rem; padding: 4px 10px;
+      cursor: pointer; white-space: nowrap; transition: background .15s;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .copy-btn:hover { background: var(--accent); color: #fff; }
 
-    /* Raw JSON */
-    details { margin-top: 16px; }
+    /* raw json */
+    details { margin-top: 14px; }
     summary {
-      font-size: 0.78rem;
-      color: var(--muted);
-      cursor: pointer;
-      user-select: none;
-      padding: 4px 0;
+      font-size: .75rem; color: var(--muted); cursor: pointer;
+      user-select: none; padding: 4px 0;
     }
     summary:hover { color: var(--text); }
     pre {
-      margin-top: 10px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 14px;
-      font-family: 'Space Mono', monospace;
-      font-size: 0.72rem;
-      color: var(--accent2);
-      overflow-x: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      max-height: 360px;
-      overflow-y: auto;
+      margin-top: 8px; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; font-family: 'Space Mono', monospace;
+      font-size: .7rem; color: var(--accent2); overflow-x: auto;
+      white-space: pre-wrap; word-break: break-word;
+      max-height: 320px; overflow-y: auto;
     }
 
-    @media (max-width: 520px) {
-      .form-row { grid-template-columns: 1fr 1fr; }
-      .form-row .btn { grid-column: 1 / -1; }
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 20px;
+      font-size: .72rem; color: var(--muted);
+      border-top: 1px solid var(--border);
+    }
+
+    @media(max-width:500px) {
+      nav { padding: 14px 16px; }
+      main { padding: 24px 14px 60px; }
+      .form-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>⟡ Anime Player</h1>
-  <p>Fetch embed URLs from LunarAnime API and play inline</p>
-</header>
+<nav>
+  <div class="logo">⟡ LunarAnime</div>
+  <div class="nav-tag">embed player</div>
+</nav>
 
-<!-- Controls -->
-<div class="card">
-  <div class="form-row">
-    <div>
-      <label for="anilist-id">AniList ID</label>
-      <input id="anilist-id" type="number" value="1735" placeholder="e.g. 1735" min="1"/>
-    </div>
-    <div>
-      <label for="episode">Episode</label>
-      <input id="episode" type="number" value="500" placeholder="e.g. 1" min="1"/>
-    </div>
-    <button class="btn" id="fetch-btn" onclick="fetchPlayer()">▶ Load</button>
+<main>
+  <div class="hero">
+    <h1>Fetch &amp; Play<br><span>Anime Embeds</span></h1>
+    <p>Enter an AniList ID and episode — get sub &amp; dub player URLs instantly.</p>
   </div>
 
-  <div class="options-row">
-    <label class="checkbox-label">
-      <input type="checkbox" id="autoplay" checked/> Autoplay
-    </label>
-    <label class="checkbox-label">
-      <input type="checkbox" id="skip-intro"/> Skip Intro
-    </label>
-    <label class="checkbox-label">
-      <input type="checkbox" id="skip-outro"/> Skip Outro
-    </label>
-  </div>
-
-  <!-- Proxy config -->
-  <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
-    <label for="proxy-base">Custom proxy base URL (optional)</label>
-    <input id="proxy-base" type="text" placeholder="Leave blank to auto-try built-in proxies" style="font-size:0.78rem"/>
-    <div style="font-size:0.72rem;color:var(--muted);margin-top:5px">
-      Blank = automatically tries multiple open CORS proxies in order.
+  <div class="card">
+    <div class="form-grid">
+      <div class="field">
+        <label for="anilist-id">AniList ID</label>
+        <input id="anilist-id" type="number" value="1735" min="1" placeholder="e.g. 1735"/>
+      </div>
+      <div class="field">
+        <label for="episode">Episode</label>
+        <input id="episode" type="number" value="500" min="1" placeholder="e.g. 1"/>
+      </div>
     </div>
+
+    <div class="toggles">
+      <label class="tog"><input type="checkbox" id="autoplay" checked/> Autoplay</label>
+      <label class="tog"><input type="checkbox" id="skip-intro"/> Skip Intro</label>
+      <label class="tog"><input type="checkbox" id="skip-outro"/> Skip Outro</label>
+    </div>
+
+    <button class="btn-load" id="fetch-btn" onclick="fetchPlayer()">▶ Load</button>
+    <div id="status"></div>
   </div>
 
-  <div id="status"></div>
-</div>
+  <div id="player-wrap">
+    <iframe id="player-frame" allowfullscreen allow="autoplay; fullscreen"></iframe>
+  </div>
 
-<!-- Player -->
-<div id="player-wrap">
-  <iframe id="player-frame" allowfullscreen allow="autoplay; fullscreen"></iframe>
-</div>
+  <div class="card" id="results-card">
+    <div class="section-label">Servers</div>
+    <div id="servers" class="servers"></div>
 
-<!-- Results -->
-<div class="card" id="results-card">
-  <div id="tabs" class="tabs"></div>
-  <div id="meta" class="meta-grid"></div>
-  <details>
-    <summary>Raw JSON response</summary>
-    <pre id="raw-json"></pre>
-  </details>
-</div>
+    <div class="section-label">Now Playing</div>
+    <div id="meta" class="meta-grid"></div>
 
-<script>
-  const API_BASE = 'https://api.lunaranime.ru/api/3rdprovider';
+    <div class="section-label">Player URLs</div>
+    <div id="urls"></div>
 
-  // Open CORS proxies that accept any origin, tried in order.
-  // Pattern: [baseUrl, urlBuilder]
-  const PROXY_CHAIN = [
-    // corsproxy.io  — proxy/URL (no encode)
-    u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
-    // allorigins — returns JSON wrapper, handled specially
-    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-    // cors-anywhere public demo (rate-limited but open)
-    u => `https://cors-anywhere.herokuapp.com/${u}`,
-  ];
+    <details>
+      <summary>Raw JSON response</summary>
+      <pre id="raw-json"></pre>
+    </details>
+  </div>
+</main>
 
-  let currentData = null;
+<footer>LunarAnime Embed Player · GitHub Pages</footer>
+
+<script type="module">
+  import { getPlayer } from './lunar.js';
+
+  const API_BASE = "https://api.lunaranime.ru/api/3rdprovider";
+  let allServers = [];
 
   function setStatus(msg, type = 'info') {
     const el = document.getElementById('status');
@@ -325,168 +300,116 @@
     el.className = type;
   }
 
-  function buildTargetUrl(anilist, episode) {
+  window.fetchPlayer = async function () {
+    const anilist   = document.getElementById('anilist-id').value.trim();
+    const episode   = document.getElementById('episode').value.trim();
     const autoplay  = document.getElementById('autoplay').checked;
     const skipIntro = document.getElementById('skip-intro').checked;
     const skipOutro = document.getElementById('skip-outro').checked;
 
-    const params = new URLSearchParams({ anilist, episode, autoplay });
-    if (skipIntro) params.set('skip_intro', 'true');
-    if (skipOutro) params.set('skip_outro', 'true');
-
-    return `${API_BASE}?${params.toString()}`;
-  }
-
-  // Try a single proxy URL, return parsed JSON or throw
-  async function tryFetch(proxyUrl, isAllOrigins = false) {
-    const res = await fetch(proxyUrl);
-    if (!res.ok) {
-      let body = '';
-      try { body = await res.text(); } catch(_) {}
-      throw new Error(`HTTP ${res.status}: ${body.slice(0, 120) || res.statusText}`);
-    }
-    if (isAllOrigins) {
-      // allorigins wraps response: { contents: "...", status: {...} }
-      const wrapper = await res.json();
-      return JSON.parse(wrapper.contents);
-    }
-    return res.json();
-  }
-
-  async function fetchPlayer() {
-    const anilist = document.getElementById('anilist-id').value.trim();
-    const episode = document.getElementById('episode').value.trim();
-
     if (!anilist || !episode) {
-      setStatus('Please enter both an AniList ID and episode number.', 'err');
-      return;
+      setStatus('Enter both an AniList ID and episode number.', 'err'); return;
     }
 
     const btn = document.getElementById('fetch-btn');
-    btn.disabled = true;
-    btn.textContent = '⏳ Loading…';
+    btn.disabled = true; btn.textContent = '⏳ Loading…';
     document.getElementById('player-wrap').style.display  = 'none';
     document.getElementById('results-card').style.display = 'none';
+    setStatus('Fetching from LunarAnime API…', 'info');
 
-    const targetUrl = buildTargetUrl(anilist, episode);
+    try {
+      allServers = await getPlayer(anilist, episode, { autoplay, skipIntro, skipOutro });
+      renderServers(allServers);
+      loadServer(allServers[0], document.querySelector('.srv-btn'));
+      setStatus(`✓ Found ${allServers.length} stream(s)`, 'ok');
+      document.getElementById('results-card').style.display = 'block';
 
-    // Build proxy list — custom first if provided
-    const customBase = document.getElementById('proxy-base').value.trim().replace(/\/$/, '');
-    const proxies = customBase
-      ? [{ url: `${customBase}/${targetUrl}`, isAllOrigins: false }]
-      : PROXY_CHAIN.map((fn, i) => ({ url: fn(targetUrl), isAllOrigins: i === 1 }));
+      // raw JSON — rebuild synthetic data for display
+      document.getElementById('raw-json').textContent =
+        JSON.stringify({ success: true, data: allServers }, null, 2);
 
-    let json = null;
-    let lastErr = '';
-
-    for (let i = 0; i < proxies.length; i++) {
-      const { url, isAllOrigins } = proxies[i];
-      const label = customBase ? 'custom proxy' : ['corsproxy.io', 'allorigins', 'cors-anywhere'][i];
-      setStatus(`Trying ${label}…<br><small style="opacity:.5;word-break:break-all">${escHtml(url)}</small>`, 'info');
-      try {
-        json = await tryFetch(url, isAllOrigins);
-        if (json && json.success) {
-          setStatus(`✓ Success via <b>${label}</b> · ${json.data.length} server(s)`, 'ok');
-          break;
-        } else {
-          lastErr = json?.message || 'API returned failure';
-          json = null;
-        }
-      } catch(e) {
-        lastErr = `${label}: ${e.message}`;
-        console.warn(`Proxy ${label} failed:`, e);
-      }
+    } catch(err) {
+      setStatus(`❌ ${escHtml(err.message)}`, 'err');
+      console.error(err);
+    } finally {
+      btn.disabled = false; btn.textContent = '▶ Load';
     }
+  };
 
-    if (!json) {
-      setStatus(`❌ All proxies failed. Last error: ${escHtml(lastErr)}<br>
-        <small style="opacity:.6">Target: ${escHtml(targetUrl)}</small><br>
-        <small style="opacity:.6">Try opening the file from a web server (not file://) or paste a working proxy base URL above.</small>`, 'err');
-      btn.disabled = false;
-      btn.textContent = '▶ Load';
-      return;
-    }
-
-    currentData = json;
-    renderResults(json);
-    loadPlayer(json.data[0].player_url);
-
-    btn.disabled = false;
-    btn.textContent = '▶ Load';
+  function renderServers(servers) {
+    const el = document.getElementById('servers');
+    el.innerHTML = '';
+    servers.forEach((s, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'srv-btn' + (i === 0 ? ' active' : '');
+      const dotClass = s.audio === 'sub' ? 'dot-sub' : s.audio === 'dub' ? 'dot-dub' : 'dot-dual';
+      btn.innerHTML = `<span class="dot ${dotClass}"></span>${s.server ?? 'Server '+(i+1)} · ${s.audio ?? '—'}`;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.srv-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadServer(s);
+      });
+      el.appendChild(btn);
+    });
   }
 
-  function loadPlayer(url) {
+  function loadServer(server) {
+    // Player
     const wrap  = document.getElementById('player-wrap');
     const frame = document.getElementById('player-frame');
-    frame.src   = url;
+    frame.src = server.player_url;
     wrap.style.display = 'block';
     wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    // Meta
+    renderMeta(server);
+
+    // URL rows — show all URLs for context
+    renderUrls();
   }
 
-  function renderResults(json) {
-    const card = document.getElementById('results-card');
-    card.style.display = 'block';
-
-    // Tabs for each server
-    const tabsEl = document.getElementById('tabs');
-    tabsEl.innerHTML = '';
-
-    json.data.forEach((item, i) => {
-      const tab = document.createElement('button');
-      tab.className = 'tab' + (i === 0 ? ' active' : '');
-      tab.textContent = `${item.server || 'Server ' + (i+1)} · ${item.audio || '—'}`;
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        loadPlayer(item.player_url);
-        renderMeta(item);
-      });
-      tabsEl.appendChild(tab);
-    });
-
-    renderMeta(json.data[0]);
-
-    // Raw JSON
-    document.getElementById('raw-json').textContent = JSON.stringify(json, null, 2);
-  }
-
-  function renderMeta(item) {
-    const el = document.getElementById('meta');
+  function renderMeta(s) {
     const fields = [
-      { key: 'AniList ID',   val: item.anilist_id },
-      { key: 'Episode',      val: item.episode },
-      { key: 'Server',       val: item.server },
-      { key: 'Audio',        val: item.audio,  badge: true },
-      { key: 'Access ID',    val: item.access_id },
-      { key: 'Player URL',   val: item.player_url },
+      { k: 'AniList ID', v: s.anilist_id },
+      { k: 'Episode',    v: s.episode },
+      { k: 'Server',     v: s.server },
+      { k: 'Audio',      v: s.audio, badge: true },
+      { k: 'Access ID',  v: s.access_id },
     ];
-
-    el.innerHTML = fields.map(f => {
-      let valHtml;
-      if (f.badge && f.val) {
-        valHtml = `<span class="val badge ${f.val}">${f.val}</span>`;
-      } else {
-        const v = f.val != null ? f.val : '—';
-        valHtml = `<div class="val">${escHtml(String(v))}</div>`;
-      }
-      return `
-        <div class="meta-item">
-          <div class="key">${f.key}</div>
-          ${valHtml}
-        </div>`;
+    document.getElementById('meta').innerHTML = fields.map(f => {
+      const v = f.v != null ? f.v : '—';
+      const val = f.badge && f.v
+        ? `<span class="badge badge-${f.v}">${f.v}</span>`
+        : `<div class="mv">${escHtml(String(v))}</div>`;
+      return `<div class="meta-item"><div class="mk">${f.k}</div>${val}</div>`;
     }).join('');
   }
 
-  function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  function renderUrls() {
+    const el = document.getElementById('urls');
+    el.innerHTML = allServers.map(s => `
+      <div class="url-row">
+        <span>${escHtml(s.player_url)}</span>
+        <button class="copy-btn" onclick="copyUrl(this,'${escHtml(s.player_url)}')">Copy</button>
+      </div>`).join('');
   }
 
-  // Allow Enter key to trigger load
-  ['anilist-id','episode'].forEach(id => {
+  window.copyUrl = function(btn, url) {
+    navigator.clipboard.writeText(url).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 1500);
+    });
+  };
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  ['anilist-id','episode'].forEach(id =>
     document.getElementById(id).addEventListener('keydown', e => {
       if (e.key === 'Enter') fetchPlayer();
-    });
-  });
+    })
+  );
 </script>
 </body>
 </html>
