@@ -6,42 +6,52 @@
 <style>
   body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
   input, button { padding: 8px; margin: 4px; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; }
-  button { cursor: pointer; background: #333; }
-  button:hover { background: #555; }
+  button { cursor: pointer; background: #333; } button:hover { background: #555; }
   .card { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 12px; margin: 8px 0; }
   .label { color: #888; font-size: 12px; }
-  a { color: #4af; }
-  #status { color: #fa4; margin: 8px 0; }
+  a { color: #4af; } #status { color: #fa4; margin: 8px 0; }
 </style>
 </head>
 <body>
-
 <h2>🌙 Lunar Anime Player API</h2>
-
 <label>AniList ID: <input id="anilist_id" value="1735"></label>
 <label>Episode: <input id="episode" value="1"></label><br>
 <label><input type="checkbox" id="skip_intro"> Skip Intro</label>
 <label><input type="checkbox" id="skip_outro"> Skip Outro</label><br><br>
 <button onclick="fetchPlayer()">Fetch Servers</button>
-
 <div id="status"></div>
 <div id="results"></div>
 
 <script>
-const CORS = "https://corsproxy.io/?url=";
+const PROXIES = [
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+];
+
+async function tryFetch(url) {
+  for (const proxy of PROXIES) {
+    try {
+      const res = await fetch(proxy(url));
+      const text = await res.text();
+      // Make sure it's actually JSON, not a proxy error page
+      if (text.trim().startsWith("{") || text.trim().startsWith("[")) {
+        return JSON.parse(text);
+      }
+    } catch (e) {
+      console.warn("Proxy failed:", e.message);
+    }
+  }
+  throw new Error("All proxies failed");
+}
 
 async function fetchPlayer() {
-  const anilist_id = document.getElementById("anilist_id").value;
-  const episode    = document.getElementById("episode").value;
-  const skip_intro = document.getElementById("skip_intro").checked;
-  const skip_outro = document.getElementById("skip_outro").checked;
-
   const params = new URLSearchParams({
-    anilist: anilist_id,
-    episode: episode,
+    anilist: document.getElementById("anilist_id").value,
+    episode: document.getElementById("episode").value,
     autoplay: "true",
-    ...(skip_intro && { skip_intro: "true" }),
-    ...(skip_outro && { skip_outro: "true" }),
+    ...(document.getElementById("skip_intro").checked && { skip_intro: "true" }),
+    ...(document.getElementById("skip_outro").checked && { skip_outro: "true" }),
   });
 
   const apiUrl = `https://api.lunaranime.ru/api/3rdprovider?${params}`;
@@ -49,17 +59,13 @@ async function fetchPlayer() {
   document.getElementById("results").innerHTML = "";
 
   try {
-    const res = await fetch(CORS + encodeURIComponent(apiUrl), {
-      headers: { "Referer": "https://lunaranime.ru/", "Origin": "https://lunaranime.ru" }
-    });
-    const data = await res.json();
+    const data = await tryFetch(apiUrl);
 
     if (!data.success) {
       document.getElementById("status").textContent = "API error: " + JSON.stringify(data);
       return;
     }
 
-    // Expand flixcloud entries into sub/dub
     const expanded = [];
     for (const s of data.data) {
       const pu = s.player_url || "";
@@ -72,20 +78,19 @@ async function fetchPlayer() {
       }
     }
 
-    document.getElementById("status").textContent = `Found ${expanded.length} server(s)`;
+    document.getElementById("status").textContent = `✅ Found ${expanded.length} server(s)`;
     document.getElementById("results").innerHTML = expanded.map(s => `
       <div class="card">
         <div><span class="label">Server</span> ${s.server}</div>
         <div><span class="label">Audio &nbsp;</span> ${s.audio || "—"}</div>
-        <div><span class="label">URL &nbsp;&nbsp;&nbsp;</span> <a href="${s.player_url}" target="_blank">${s.player_url}</a></div>
+        <div><span class="label">URL</span> <a href="${s.player_url}" target="_blank">${s.player_url}</a></div>
       </div>
     `).join("");
 
   } catch (e) {
-    document.getElementById("status").textContent = "Error: " + e.message;
+    document.getElementById("status").textContent = "❌ Error: " + e.message;
   }
 }
 </script>
-
 </body>
 </html>
