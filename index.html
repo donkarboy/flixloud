@@ -278,15 +278,11 @@
 
   <!-- Proxy config -->
   <div style="margin-top:16px; border-top:1px solid var(--border); padding-top:14px;">
-    <label for="proxy-pattern">Proxy pattern</label>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <button class="tab active" onclick="setPattern(0,this)">proxy/<i>url</i></button>
-      <button class="tab" onclick="setPattern(1,this)">proxy?url=<i>url</i></button>
-      <button class="tab" onclick="setPattern(2,this)">proxy?target=<i>encoded</i></button>
-      <button class="tab" onclick="setPattern(3,this)">Direct (no proxy)</button>
+    <label for="proxy-base">Custom proxy base URL (optional)</label>
+    <input id="proxy-base" type="text" placeholder="Leave blank to auto-try built-in proxies" style="font-size:0.78rem"/>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:5px">
+      Blank = automatically tries multiple open CORS proxies in order.
     </div>
-    <label for="proxy-base">Proxy base URL</label>
-    <input id="proxy-base" type="text" value="https://vixsrcproxy2.khantara922.workers.dev/" style="font-size:0.78rem"/>
   </div>
 
   <div id="status"></div>
@@ -310,14 +306,18 @@
 <script>
   const API_BASE = 'https://api.lunaranime.ru/api/3rdprovider';
 
-  let currentData = null;
-  let proxyPattern = 0; // 0=path, 1=?url=, 2=?target=encoded, 3=direct
+  // Open CORS proxies that accept any origin, tried in order.
+  // Pattern: [baseUrl, urlBuilder]
+  const PROXY_CHAIN = [
+    // corsproxy.io  — proxy/URL (no encode)
+    u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+    // allorigins — returns JSON wrapper, handled specially
+    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+    // cors-anywhere public demo (rate-limited but open)
+    u => `https://cors-anywhere.herokuapp.com/${u}`,
+  ];
 
-  function setPattern(n, btn) {
-    proxyPattern = n;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    btn.classList.add('active');
-  }
+  let currentData = null;
 
   function setStatus(msg, type = 'info') {
     const el = document.getElementById('status');
@@ -337,15 +337,20 @@
     return `${API_BASE}?${params.toString()}`;
   }
 
-  function buildProxyUrl(targetUrl) {
-    const base = document.getElementById('proxy-base').value.trim().replace(/\/$/, '');
-    switch (proxyPattern) {
-      case 0: return `${base}/${targetUrl}`;                                   // proxy/https://...
-      case 1: return `${base}/?url=${encodeURIComponent(targetUrl)}`;          // proxy?url=encoded
-      case 2: return `${base}/?target=${encodeURIComponent(targetUrl)}`;       // proxy?target=encoded
-      case 3: return targetUrl;                                                 // direct (no proxy)
-      default: return `${base}/${targetUrl}`;
+  // Try a single proxy URL, return parsed JSON or throw
+  async function tryFetch(proxyUrl, isAllOrigins = false) {
+    const res = await fetch(proxyUrl);
+    if (!res.ok) {
+      let body = '';
+      try { body = await res.text(); } catch(_) {}
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 120) || res.statusText}`);
     }
+    if (isAllOrigins) {
+      // allorigins wraps response: { contents: "...", status: {...} }
+      const wrapper = await res.json();
+      return JSON.parse(wrapper.contents);
+    }
+    return res.json();
   }
 
   async function fetchPlayer() {
@@ -360,44 +365,54 @@
     const btn = document.getElementById('fetch-btn');
     btn.disabled = true;
     btn.textContent = '⏳ Loading…';
-
-    document.getElementById('player-wrap').style.display   = 'none';
-    document.getElementById('results-card').style.display  = 'none';
+    document.getElementById('player-wrap').style.display  = 'none';
+    document.getElementById('results-card').style.display = 'none';
 
     const targetUrl = buildTargetUrl(anilist, episode);
-    const proxyUrl  = buildProxyUrl(targetUrl);
 
-    setStatus(`Fetching via proxy…<br><small style="opacity:.6;word-break:break-all">${escHtml(proxyUrl)}</small>`, 'info');
+    // Build proxy list — custom first if provided
+    const customBase = document.getElementById('proxy-base').value.trim().replace(/\/$/, '');
+    const proxies = customBase
+      ? [{ url: `${customBase}/${targetUrl}`, isAllOrigins: false }]
+      : PROXY_CHAIN.map((fn, i) => ({ url: fn(targetUrl), isAllOrigins: i === 1 }));
 
-    try {
-      const res = await fetch(proxyUrl);
+    let json = null;
+    let lastErr = '';
 
-      if (!res.ok) {
-        // Try to read body for more detail
-        let body = '';
-        try { body = await res.text(); } catch(_) {}
-        throw new Error(`HTTP ${res.status} — ${res.statusText}${body ? ': ' + body.slice(0, 200) : ''}`);
+    for (let i = 0; i < proxies.length; i++) {
+      const { url, isAllOrigins } = proxies[i];
+      const label = customBase ? 'custom proxy' : ['corsproxy.io', 'allorigins', 'cors-anywhere'][i];
+      setStatus(`Trying ${label}…<br><small style="opacity:.5;word-break:break-all">${escHtml(url)}</small>`, 'info');
+      try {
+        json = await tryFetch(url, isAllOrigins);
+        if (json && json.success) {
+          setStatus(`✓ Success via <b>${label}</b> · ${json.data.length} server(s)`, 'ok');
+          break;
+        } else {
+          lastErr = json?.message || 'API returned failure';
+          json = null;
+        }
+      } catch(e) {
+        lastErr = `${label}: ${e.message}`;
+        console.warn(`Proxy ${label} failed:`, e);
       }
+    }
 
-      const json = await res.json();
-
-      if (!json.success || !json.data || json.data.length === 0) {
-        throw new Error(json.message || 'No embed data found for this episode.');
-      }
-
-      currentData = json;
-      renderResults(json);
-      loadPlayer(json.data[0].player_url);
-
-      setStatus(`✓ Found ${json.data.length} server${json.data.length > 1 ? 's' : ''} · Status: ${json.status}`, 'ok');
-
-    } catch (err) {
-      setStatus(`❌ ${escHtml(err.message)}<br><small style="opacity:.6">Proxy URL: ${escHtml(proxyUrl)}</small>`, 'err');
-      console.error(err);
-    } finally {
+    if (!json) {
+      setStatus(`❌ All proxies failed. Last error: ${escHtml(lastErr)}<br>
+        <small style="opacity:.6">Target: ${escHtml(targetUrl)}</small><br>
+        <small style="opacity:.6">Try opening the file from a web server (not file://) or paste a working proxy base URL above.</small>`, 'err');
       btn.disabled = false;
       btn.textContent = '▶ Load';
+      return;
     }
+
+    currentData = json;
+    renderResults(json);
+    loadPlayer(json.data[0].player_url);
+
+    btn.disabled = false;
+    btn.textContent = '▶ Load';
   }
 
   function loadPlayer(url) {
