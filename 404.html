@@ -388,9 +388,66 @@
     .auto-group { margin-left: 0; width: 100%; }
     .auto-btn { flex: 1; justify-content: center; }
   }
+
+  /* ── Panel hide/show system ── */
+  header,
+  .url-row,
+  .ep-info,
+  .controls,
+  .sources-bar {
+    transition: opacity .25s ease, transform .25s ease, max-height .25s ease;
+  }
+
+  body.panels-hidden header,
+  body.panels-hidden .url-row,
+  body.panels-hidden .ep-info,
+  body.panels-hidden .controls,
+  body.panels-hidden .sources-bar {
+    opacity: 0;
+    pointer-events: none;
+    max-height: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    transform: translateY(-6px);
+  }
+
+  /* ── Toggle panel button ── */
+  .panel-toggle {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 20;
+    background: rgba(15,17,23,.75);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--muted);
+    cursor: pointer;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(6px);
+    transition: color .15s, background .15s, opacity .2s;
+    opacity: 0.5;
+  }
+  .panel-toggle:hover { color: var(--text); background: rgba(30,37,53,.9); opacity: 1; }
+  .panel-toggle svg { width: 17px; height: 17px; fill: currentColor; }
+
+  /* show toggle brighter when panels are visible */
+  body:not(.panels-hidden) .panel-toggle {
+    color: var(--accent);
+    opacity: 1;
+  }
+
+  /* ── Wrap gap suppression when panels hidden ── */
+  body.panels-hidden .wrap {
+    gap: 0;
+  }
 </style>
 </head>
-<body>
+<body class="panels-hidden">
 
 <header>
   <div class="logo">Lunar<span>Player</span></div>
