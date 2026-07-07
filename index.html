@@ -1,415 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LunarAnime Player</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono&display=swap');
-
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:      #080a10;
-      --surface: #10131f;
-      --card:    #14182a;
-      --border:  #1f2540;
-      --accent:  #7c6fff;
-      --accent2: #b09eff;
-      --text:    #dde1f5;
-      --muted:   #5a6080;
-      --success: #3ddba0;
-      --error:   #ff6b7a;
-      --sub:     #4ade80;
-      --dub:     #f472b6;
-      --r: 12px;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Space Grotesk', sans-serif;
-      min-height: 100vh;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-    }
-
-    /* ── NAV ── */
-    nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 18px 32px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(8,10,16,.85);
-      backdrop-filter: blur(12px);
-      position: sticky; top: 0; z-index: 10;
-    }
-    .logo {
-      font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em;
-      background: linear-gradient(110deg, var(--accent2), var(--accent));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .nav-tag {
-      font-size: 0.7rem; background: var(--card); border: 1px solid var(--border);
-      border-radius: 99px; padding: 3px 10px; color: var(--muted);
-      font-family: 'Space Mono', monospace;
-    }
-
-    /* ── MAIN ── */
-    main {
-      max-width: 800px; width: 100%;
-      margin: 0 auto; padding: 40px 20px 80px;
-    }
-
-    /* ── HERO ── */
-    .hero { margin-bottom: 36px; }
-    .hero h1 {
-      font-size: clamp(1.6rem, 4vw, 2.4rem);
-      font-weight: 700; letter-spacing: -0.03em; line-height: 1.2;
-      margin-bottom: 8px;
-    }
-    .hero h1 span {
-      background: linear-gradient(110deg, var(--accent2), var(--accent));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .hero p { color: var(--muted); font-size: 0.9rem; }
-
-    /* ── CARD ── */
-    .card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: var(--r); padding: 24px; margin-bottom: 20px;
-    }
-
-    /* ── FORM ── */
-    .form-grid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;
-    }
-    .field label {
-      display: block; font-size: 0.7rem; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
-    }
-    input[type=number], input[type=text] {
-      width: 100%; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); font-family: 'Space Mono', monospace;
-      font-size: .88rem; padding: 10px 13px; outline: none; transition: border-color .2s;
-    }
-    input:focus { border-color: var(--accent); }
-
-    .toggles {
-      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
-    }
-    .tog {
-      display: flex; align-items: center; gap: 6px;
-      font-size: .78rem; color: var(--muted); cursor: pointer; user-select: none;
-    }
-    .tog input { accent-color: var(--accent); }
-
-    .btn-load {
-      width: 100%; background: var(--accent); color: #fff; border: none;
-      border-radius: 8px; font-family: 'Space Grotesk', sans-serif;
-      font-size: .95rem; font-weight: 700; padding: 13px;
-      cursor: pointer; transition: background .2s, transform .1s; letter-spacing: .01em;
-    }
-    .btn-load:hover { background: #6a5ef0; }
-    .btn-load:active { transform: scale(.98); }
-    .btn-load:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
-
-    /* ── STATUS ── */
-    #status {
-      font-size: .8rem; padding: 9px 13px; border-radius: 8px;
-      margin-top: 14px; display: none; line-height: 1.6;
-    }
-    #status.info { background: #131a30; color: var(--accent2); display: block; }
-    #status.ok   { background: #0b2e1e; color: var(--success);  display: block; }
-    #status.err  { background: #2e0b10; color: var(--error);    display: block; }
-
-    /* ── PLAYER ── */
-    #player-wrap {
-      width: 100%; aspect-ratio: 16/9;
-      background: #000; border-radius: var(--r);
-      border: 1px solid var(--border); overflow: hidden; display: none; margin-bottom: 20px;
-    }
-    #player-wrap iframe { width: 100%; height: 100%; border: none; }
-
-    /* ── RESULTS ── */
-    #results-card { display: none; }
-
-    .section-label {
-      font-size: .68rem; text-transform: uppercase; letter-spacing: .1em;
-      color: var(--muted); margin-bottom: 10px; font-weight: 600;
-    }
-
-    /* server buttons */
-    .servers { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
-    .srv-btn {
-      display: flex; align-items: center; gap: 7px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 8px 14px; cursor: pointer;
-      font-family: 'Space Grotesk', sans-serif; font-size: .8rem;
-      font-weight: 600; color: var(--muted); transition: all .15s;
-    }
-    .srv-btn:hover { border-color: var(--accent); color: var(--text); }
-    .srv-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-    .srv-btn .dot {
-      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-    }
-    .dot-sub { background: var(--sub); }
-    .dot-dub { background: var(--dub); }
-    .dot-dual { background: var(--accent2); }
-
-    /* meta grid */
-    .meta-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr));
-      gap: 10px; margin-bottom: 16px;
-    }
-    .meta-item {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px;
-    }
-    .meta-item .mk {
-      font-size: .65rem; text-transform: uppercase; letter-spacing: .09em;
-      color: var(--muted); margin-bottom: 3px;
-    }
-    .meta-item .mv {
-      font-family: 'Space Mono', monospace; font-size: .78rem;
-      color: var(--text); word-break: break-all;
-    }
-    .badge {
-      display: inline-block; padding: 2px 9px; border-radius: 99px;
-      font-size: .7rem; font-weight: 700; font-family: 'Space Grotesk', sans-serif;
-    }
-    .badge-sub  { background: #0d2e18; color: var(--sub); }
-    .badge-dub  { background: #2e0d1e; color: var(--dub); }
-    .badge-dual { background: #1a1650; color: var(--accent2); }
-
-    /* url copy row */
-    .url-row {
-      display: flex; align-items: center; gap: 8px;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 9px 12px; margin-bottom: 10px;
-    }
-    .url-row span {
-      font-family: 'Space Mono', monospace; font-size: .73rem;
-      color: var(--accent2); flex: 1; word-break: break-all;
-    }
-    .copy-btn {
-      background: var(--border); border: none; border-radius: 6px;
-      color: var(--muted); font-size: .7rem; padding: 4px 10px;
-      cursor: pointer; white-space: nowrap; transition: background .15s;
-      font-family: 'Space Grotesk', sans-serif;
-    }
-    .copy-btn:hover { background: var(--accent); color: #fff; }
-
-    /* raw json */
-    details { margin-top: 14px; }
-    summary {
-      font-size: .75rem; color: var(--muted); cursor: pointer;
-      user-select: none; padding: 4px 0;
-    }
-    summary:hover { color: var(--text); }
-    pre {
-      margin-top: 8px; background: var(--surface); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px; font-family: 'Space Mono', monospace;
-      font-size: .7rem; color: var(--accent2); overflow-x: auto;
-      white-space: pre-wrap; word-break: break-word;
-      max-height: 320px; overflow-y: auto;
-    }
-
-    /* ── FOOTER ── */
-    footer {
-      text-align: center; padding: 20px;
-      font-size: .72rem; color: var(--muted);
-      border-top: 1px solid var(--border);
-    }
-
-    @media(max-width:500px) {
-      nav { padding: 14px 16px; }
-      main { padding: 24px 14px 60px; }
-      .form-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Lunar Anime Player</title>
+<style>
+  body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+  input, button { padding: 8px; margin: 4px; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; }
+  button { cursor: pointer; background: #333; }
+  button:hover { background: #555; }
+  .card { background: #1a1a1a; border: 1px solid #333; border-radius: 6px; padding: 12px; margin: 8px 0; }
+  .label { color: #888; font-size: 12px; }
+  a { color: #4af; }
+  #status { color: #fa4; margin: 8px 0; }
+</style>
 </head>
 <body>
 
-<nav>
-  <div class="logo">⟡ LunarAnime</div>
-  <div class="nav-tag">embed player</div>
-</nav>
+<h2>🌙 Lunar Anime Player API</h2>
 
-<main>
-  <div class="hero">
-    <h1>Fetch &amp; Play<br><span>Anime Embeds</span></h1>
-    <p>Enter an AniList ID and episode — get sub &amp; dub player URLs instantly.</p>
-  </div>
+<label>AniList ID: <input id="anilist_id" value="1735"></label>
+<label>Episode: <input id="episode" value="1"></label><br>
+<label><input type="checkbox" id="skip_intro"> Skip Intro</label>
+<label><input type="checkbox" id="skip_outro"> Skip Outro</label><br><br>
+<button onclick="fetchPlayer()">Fetch Servers</button>
 
-  <div class="card">
-    <div class="form-grid">
-      <div class="field">
-        <label for="anilist-id">AniList ID</label>
-        <input id="anilist-id" type="number" value="1735" min="1" placeholder="e.g. 1735"/>
-      </div>
-      <div class="field">
-        <label for="episode">Episode</label>
-        <input id="episode" type="number" value="500" min="1" placeholder="e.g. 1"/>
-      </div>
-    </div>
+<div id="status"></div>
+<div id="results"></div>
 
-    <div class="toggles">
-      <label class="tog"><input type="checkbox" id="autoplay" checked/> Autoplay</label>
-      <label class="tog"><input type="checkbox" id="skip-intro"/> Skip Intro</label>
-      <label class="tog"><input type="checkbox" id="skip-outro"/> Skip Outro</label>
-    </div>
+<script>
+const CORS = "https://corsproxy.io/?url=";
 
-    <button class="btn-load" id="fetch-btn" onclick="fetchPlayer()">▶ Load</button>
-    <div id="status"></div>
-  </div>
+async function fetchPlayer() {
+  const anilist_id = document.getElementById("anilist_id").value;
+  const episode    = document.getElementById("episode").value;
+  const skip_intro = document.getElementById("skip_intro").checked;
+  const skip_outro = document.getElementById("skip_outro").checked;
 
-  <div id="player-wrap">
-    <iframe id="player-frame" allowfullscreen allow="autoplay; fullscreen"></iframe>
-  </div>
+  const params = new URLSearchParams({
+    anilist: anilist_id,
+    episode: episode,
+    autoplay: "true",
+    ...(skip_intro && { skip_intro: "true" }),
+    ...(skip_outro && { skip_outro: "true" }),
+  });
 
-  <div class="card" id="results-card">
-    <div class="section-label">Servers</div>
-    <div id="servers" class="servers"></div>
+  const apiUrl = `https://api.lunaranime.ru/api/3rdprovider?${params}`;
+  document.getElementById("status").textContent = "Fetching...";
+  document.getElementById("results").innerHTML = "";
 
-    <div class="section-label">Now Playing</div>
-    <div id="meta" class="meta-grid"></div>
+  try {
+    const res = await fetch(CORS + encodeURIComponent(apiUrl), {
+      headers: { "Referer": "https://lunaranime.ru/", "Origin": "https://lunaranime.ru" }
+    });
+    const data = await res.json();
 
-    <div class="section-label">Player URLs</div>
-    <div id="urls"></div>
-
-    <details>
-      <summary>Raw JSON response</summary>
-      <pre id="raw-json"></pre>
-    </details>
-  </div>
-</main>
-
-<footer>LunarAnime Embed Player · GitHub Pages</footer>
-
-<script type="module">
-  import { getPlayer } from './lunar.js';
-
-  const API_BASE = "https://api.lunaranime.ru/api/3rdprovider";
-  let allServers = [];
-
-  function setStatus(msg, type = 'info') {
-    const el = document.getElementById('status');
-    el.innerHTML = msg;
-    el.className = type;
-  }
-
-  window.fetchPlayer = async function () {
-    const anilist   = document.getElementById('anilist-id').value.trim();
-    const episode   = document.getElementById('episode').value.trim();
-    const autoplay  = document.getElementById('autoplay').checked;
-    const skipIntro = document.getElementById('skip-intro').checked;
-    const skipOutro = document.getElementById('skip-outro').checked;
-
-    if (!anilist || !episode) {
-      setStatus('Enter both an AniList ID and episode number.', 'err'); return;
+    if (!data.success) {
+      document.getElementById("status").textContent = "API error: " + JSON.stringify(data);
+      return;
     }
 
-    const btn = document.getElementById('fetch-btn');
-    btn.disabled = true; btn.textContent = '⏳ Loading…';
-    document.getElementById('player-wrap').style.display  = 'none';
-    document.getElementById('results-card').style.display = 'none';
-    setStatus('Fetching from LunarAnime API…', 'info');
-
-    try {
-      allServers = await getPlayer(anilist, episode, { autoplay, skipIntro, skipOutro });
-      renderServers(allServers);
-      loadServer(allServers[0], document.querySelector('.srv-btn'));
-      setStatus(`✓ Found ${allServers.length} stream(s)`, 'ok');
-      document.getElementById('results-card').style.display = 'block';
-
-      // raw JSON — rebuild synthetic data for display
-      document.getElementById('raw-json').textContent =
-        JSON.stringify({ success: true, data: allServers }, null, 2);
-
-    } catch(err) {
-      setStatus(`❌ ${escHtml(err.message)}`, 'err');
-      console.error(err);
-    } finally {
-      btn.disabled = false; btn.textContent = '▶ Load';
+    // Expand flixcloud entries into sub/dub
+    const expanded = [];
+    for (const s of data.data) {
+      const pu = s.player_url || "";
+      if (pu.includes("flixcloud.cc")) {
+        const sep = pu.includes("?") ? "&" : "?";
+        expanded.push({ ...s, audio: "sub", player_url: `${pu}${sep}a=1` });
+        expanded.push({ ...s, audio: "dub", player_url: `${pu}${sep}a=2` });
+      } else {
+        expanded.push(s);
+      }
     }
-  };
 
-  function renderServers(servers) {
-    const el = document.getElementById('servers');
-    el.innerHTML = '';
-    servers.forEach((s, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'srv-btn' + (i === 0 ? ' active' : '');
-      const dotClass = s.audio === 'sub' ? 'dot-sub' : s.audio === 'dub' ? 'dot-dub' : 'dot-dual';
-      btn.innerHTML = `<span class="dot ${dotClass}"></span>${s.server ?? 'Server '+(i+1)} · ${s.audio ?? '—'}`;
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.srv-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        loadServer(s);
-      });
-      el.appendChild(btn);
-    });
+    document.getElementById("status").textContent = `Found ${expanded.length} server(s)`;
+    document.getElementById("results").innerHTML = expanded.map(s => `
+      <div class="card">
+        <div><span class="label">Server</span> ${s.server}</div>
+        <div><span class="label">Audio &nbsp;</span> ${s.audio || "—"}</div>
+        <div><span class="label">URL &nbsp;&nbsp;&nbsp;</span> <a href="${s.player_url}" target="_blank">${s.player_url}</a></div>
+      </div>
+    `).join("");
+
+  } catch (e) {
+    document.getElementById("status").textContent = "Error: " + e.message;
   }
-
-  function loadServer(server) {
-    // Player
-    const wrap  = document.getElementById('player-wrap');
-    const frame = document.getElementById('player-frame');
-    frame.src = server.player_url;
-    wrap.style.display = 'block';
-    wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-    // Meta
-    renderMeta(server);
-
-    // URL rows — show all URLs for context
-    renderUrls();
-  }
-
-  function renderMeta(s) {
-    const fields = [
-      { k: 'AniList ID', v: s.anilist_id },
-      { k: 'Episode',    v: s.episode },
-      { k: 'Server',     v: s.server },
-      { k: 'Audio',      v: s.audio, badge: true },
-      { k: 'Access ID',  v: s.access_id },
-    ];
-    document.getElementById('meta').innerHTML = fields.map(f => {
-      const v = f.v != null ? f.v : '—';
-      const val = f.badge && f.v
-        ? `<span class="badge badge-${f.v}">${f.v}</span>`
-        : `<div class="mv">${escHtml(String(v))}</div>`;
-      return `<div class="meta-item"><div class="mk">${f.k}</div>${val}</div>`;
-    }).join('');
-  }
-
-  function renderUrls() {
-    const el = document.getElementById('urls');
-    el.innerHTML = allServers.map(s => `
-      <div class="url-row">
-        <span>${escHtml(s.player_url)}</span>
-        <button class="copy-btn" onclick="copyUrl(this,'${escHtml(s.player_url)}')">Copy</button>
-      </div>`).join('');
-  }
-
-  window.copyUrl = function(btn, url) {
-    navigator.clipboard.writeText(url).then(() => {
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 1500);
-    });
-  };
-
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  ['anilist-id','episode'].forEach(id =>
-    document.getElementById(id).addEventListener('keydown', e => {
-      if (e.key === 'Enter') fetchPlayer();
-    })
-  );
+}
 </script>
+
 </body>
 </html>
