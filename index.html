@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Anime Player</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0b0d14;
+      --surface:   #131624;
+      --border:    #1e2438;
+      --accent:    #6c63ff;
+      --accent2:   #a78bfa;
+      --text:      #e8eaf6;
+      --muted:     #6b7280;
+      --success:   #34d399;
+      --error:     #f87171;
+      --radius:    10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(120deg, var(--accent2), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.875rem;
+      margin-top: 6px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 720px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 6px;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 0.875rem;
+      padding: 9px 12px;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #5a52e0; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+    .options-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .checkbox-label input { accent-color: var(--accent); }
+
+    /* Status */
+    #status {
+      font-size: 0.8rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-top: 14px;
+      display: none;
+    }
+    #status.info  { background: #1e2438; color: var(--accent2); display: block; }
+    #status.ok    { background: #064e3b; color: var(--success);  display: block; }
+    #status.err   { background: #450a0a; color: var(--error);    display: block; }
+
+    /* Player */
+    #player-wrap {
+      width: 100%;
+      max-width: 720px;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: none;
+      margin-bottom: 20px;
+    }
+    #player-wrap iframe {
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    /* Results */
+    #results-card { display: none; }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .meta-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .meta-item .key {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .meta-item .val {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text);
+      word-break: break-all;
+    }
+    .val.badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .val.badge.dual  { background: #312e81; color: var(--accent2); }
+    .val.badge.sub   { background: #1a3a1a; color: var(--success); }
+    .val.badge.dub   { background: #3a1a1a; color: var(--error);   }
+
+    /* Server tabs */
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .tab {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab:hover { border-color: var(--accent); color: var(--text); }
+    .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* Raw JSON */
+    details { margin-top: 16px; }
+    summary {
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      padding: 4px 0;
+    }
+    summary:hover { color: var(--text); }
+    pre {
+      margin-top: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--accent2);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 520px) {
+      .form-row { grid-template-columns: 1fr 1fr; }
+      .form-row .btn { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⟡ Anime Player</h1>
+  <p>Fetch embed URLs from LunarAnime API and play inline</p>
+</header>
+
+<!-- Controls -->
+<div class="card">
+  <div class="form-row">
+    <div>
+      <label for="anilist-id">AniList ID</label>
+      <input id="anilist-id" type="number" value="1735" placeholder="e.g. 1735" min="1"/>
+    </div>
+    <div>
+      <label for="episode">Episode</label>
+      <input id="episode" type="number" value="500" placeholder="e.g. 1" min="1"/>
+    </div>
+    <button class="btn" id="fetch-btn" onclick="fetchPlayer()">▶ Load</button>
+  </div>
+
+  <div class="options-row">
+    <label class="checkbox-label">
+      <input type="checkbox" id="autoplay" checked/> Autoplay
+    </label>
+    <label class="checkbox-label">
+      <input type="checkbox" id="skip-intro"/> Skip Intro
+    </label>
+    <label class="checkbox-label">
+      <input type="checkbox" id="skip-outro"/> Skip Outro
+    </label>
+  </div>
+
+  <div id="status"></div>
+</div>
+
+<!-- Player -->
+<div id="player-wrap">
+  <iframe id="player-frame" allowfullscreen allow="autoplay; fullscreen"></iframe>
+</div>
+
+<!-- Results -->
+<div class="card" id="results-card">
+  <div id="tabs" class="tabs"></div>
+  <div id="meta" class="meta-grid"></div>
+  <details>
+    <summary>Raw JSON response</summary>
+    <pre id="raw-json"></pre>
+  </details>
+</div>
+
+<script>
+  const PROXY   = 'https://vixsrcproxy2.khantara922.workers.dev/';
+  const API_BASE = 'https://api.lunaranime.ru/api/3rdprovider';
+
+  let currentData = null;
+
+  function setStatus(msg, type = 'info') {
+    const el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = type;
+  }
+
+  function buildUrl(anilist, episode) {
+    const autoplay   = document.getElementById('autoplay').checked;
+    const skipIntro  = document.getElementById('skip-intro').checked;
+    const skipOutro  = document.getElementById('skip-outro').checked;
+
+    const params = new URLSearchParams({ anilist, episode, autoplay });
+    if (skipIntro) params.set('skip_intro', 'true');
+    if (skipOutro) params.set('skip_outro', 'true');
+
+    return `${PROXY}${API_BASE}?${params.toString()}`;
+  }
+
+  async function fetchPlayer() {
+    const anilist = document.getElementById('anilist-id').value.trim();
+    const episode = document.getElementById('episode').value.trim();
+
+    if (!anilist || !episode) {
+      setStatus('Please enter both an AniList ID and episode number.', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('fetch-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Loading…';
+    setStatus(`Fetching episode ${episode} for AniList ID ${anilist}…`, 'info');
+
+    document.getElementById('player-wrap').style.display   = 'none';
+    document.getElementById('results-card').style.display  = 'none';
+
+    try {
+      const url = buildUrl(anilist, episode);
+      const res = await fetch(url);
+
+      if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+
+      const json = await res.json();
+
+      if (!json.success || !json.data || json.data.length === 0) {
+        throw new Error(json.message || 'No embed data found for this episode.');
+      }
+
+      currentData = json;
+      renderResults(json);
+      loadPlayer(json.data[0].player_url);
+
+      setStatus(`✓ Found ${json.data.length} server${json.data.length > 1 ? 's' : ''} · Status: ${json.status}`, 'ok');
+
+    } catch (err) {
+      setStatus(`Error: ${err.message}`, 'err');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '▶ Load';
+    }
+  }
+
+  function loadPlayer(url) {
+    const wrap  = document.getElementById('player-wrap');
+    const frame = document.getElementById('player-frame');
+    frame.src   = url;
+    wrap.style.display = 'block';
+    wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderResults(json) {
+    const card = document.getElementById('results-card');
+    card.style.display = 'block';
+
+    // Tabs for each server
+    const tabsEl = document.getElementById('tabs');
+    tabsEl.innerHTML = '';
+
+    json.data.forEach((item, i) => {
+      const tab = document.createElement('button');
+      tab.className = 'tab' + (i === 0 ? ' active' : '');
+      tab.textContent = `${item.server || 'Server ' + (i+1)} · ${item.audio || '—'}`;
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        loadPlayer(item.player_url);
+        renderMeta(item);
+      });
+      tabsEl.appendChild(tab);
+    });
+
+    renderMeta(json.data[0]);
+
+    // Raw JSON
+    document.getElementById('raw-json').textContent = JSON.stringify(json, null, 2);
+  }
+
+  function renderMeta(item) {
+    const el = document.getElementById('meta');
+    const fields = [
+      { key: 'AniList ID',   val: item.anilist_id },
+      { key: 'Episode',      val: item.episode },
+      { key: 'Server',       val: item.server },
+      { key: 'Audio',        val: item.audio,  badge: true },
+      { key: 'Access ID',    val: item.access_id },
+      { key: 'Player URL',   val: item.player_url },
+    ];
+
+    el.innerHTML = fields.map(f => {
+      let valHtml;
+      if (f.badge && f.val) {
+        valHtml = `<span class="val badge ${f.val}">${f.val}</span>`;
+      } else {
+        const v = f.val != null ? f.val : '—';
+        valHtml = `<div class="val">${escHtml(String(v))}</div>`;
+      }
+      return `
+        <div class="meta-item">
+          <div class="key">${f.key}</div>
+          ${valHtml}
+        </div>`;
+    }).join('');
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Allow Enter key to trigger load
+  ['anilist-id','episode'].forEach(id => {
+    document.getElementById(id).addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchPlayer();
+    });
+  });
+</script>
+</body>
+</html>
